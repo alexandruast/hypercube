@@ -1,0 +1,26 @@
+- hosts: all
+  gather_facts: no
+  serial: "100%"
+
+  vars:
+    - repos_enabled: true
+    - force_setup: true
+
+  tasks:
+    - include_role:
+        name: alive
+
+    - include_role:
+        name: gather-facts
+
+    - include_role:
+        name: check-sudo
+
+    - include_role:
+        name: base
+
+    - include_role:
+        name: docker
+
+    - include_role:
+        name: kubernetes

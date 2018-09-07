@@ -21,8 +21,9 @@
   - 12-factor app checklist
 
 #### Phase 3 - Security and Availability
-  - GitHub OAuth
+  - GitHub OAuth for Jenkins
   - Security and encryption
+  - Authority certificates
   - Chaos engineering
 
 #### Phase 4 - Cloud

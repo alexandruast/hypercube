@@ -1,0 +1,73 @@
+- name: "base packages present"
+  package:
+    name: "{{item}}"
+    state: present
+  become: true
+  with_items:
+    - "{{base_packages}}"
+
+- name: "pam limits set"
+  pam_limits:
+    domain: "{{item.domain}}"
+    limit_type: "{{item.type}}"
+    limit_item: "{{item.limit}}"
+    value: "{{item.value}}"
+  become: true
+  with_items:
+    - "{{pam_limits}}"
+  
+- name: "sysctl values set"
+  sysctl:
+    name: "{{item.name}}"
+    value: "{{item.value}}"
+    sysctl_set: yes
+    reload: yes
+  become: true
+  with_items:
+    - "{{sysctl_entries}}"
+
+- name: "/etc/hosts updated"
+  template:
+    src: "hosts.j2"
+    dest: "/etc/hosts"
+  become: true
+
+- name: "/etc/dhcp/dhclient.conf updated"
+  copy:
+    src: "{{role_path}}/files/dhclient.conf"
+    dest: "/etc/dhcp/dhclient.conf"
+  become: true
+  register: dhclientConf
+
+- name: "restart network"
+  systemd:
+    name: network
+    enabled: yes
+    state: restarted
+  become: true
+  when: dhclientConf is changed
+
+- name: "run dhclient"
+  shell: dhclient -r && dhclient
+  become: true
+  when: dhclientConf is changed
+
+- name: "unneeded services disabled and stopped"
+  systemd:
+    name: "{{item}}"
+    enabled: no
+    state: stopped
+  become: true
+  ignore_errors: true
+  with_items:
+    - "{{disabled_services}}"
+
+- name: "base services enabled and started"
+  systemd:
+    name: "{{item}}"
+    enabled: yes
+    masked: no
+    state: started
+  become: true
+  with_items:
+    - "{{base_services}}"

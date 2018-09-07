@@ -1,0 +1,40 @@
+- name: "docker repository added"
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docer-ce.repo
+  become: true
+  when: ansible_distribution|lower == 'redhat' or ansible_distribution|lower == 'centos'
+
+- name: "docker packages installed"
+  package:
+    name: "{{item}}"
+    state: present
+  become: true
+  with_items:
+    - "{{docker_packages}}"
+
+- name: "docker group present"
+  group:
+    name: docker
+  become: true
+
+- name: "{{ansible_user_id}} appended to docker groups"
+  user:
+    name: "{{ansible_user_id}}"
+    groups: docker
+    append: yes
+  become: true
+
+- name: "net.ipv4.ip_forward is enabled"
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    sysctl_set: yes
+  become: true
+
+- name: "service enabled and started"
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+  become: true
