@@ -1,6 +1,6 @@
 # hypercube
 
-## CentOS Microservices Platform Built on Kubernetes
+## Microservices Platform Built on Kubernetes
 
 ### Success criteria
   - Have a fully configured Kubernetes cluster
