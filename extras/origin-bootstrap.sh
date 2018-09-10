@@ -3,8 +3,9 @@ set -eEuo pipefail
 trap 'RC=$?; echo [error] exit code $RC running $BASH_COMMAND; exit $RC' ERR
 
 SSH_OPTS='-o LogLevel=error -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes'
+
 JQ_VERSION='1.5'
-ANSIBLE_VERSION='2.5.2'
+ANSIBLE_VERSION='2.6.4'
 
 install_jq() {
   sudo curl -LSs https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 -o /usr/local/bin/jq \
@@ -19,22 +20,25 @@ install_ansible() {
   sudo pip install ansible==${ANSIBLE_VERSION}
 }
 
-sudo yum -q -y install python libselinux-python
-
-which pip >/dev/null || install_pip
-which ansible >/dev/null || install_ansible
-which jq >/dev/null || install_jq
-
-echo $1
-
-exit 1
-
 cd /vagrant/
 
-KUBE_NODES="$(echo $2 | jq -re .[].ip | tr '\n' ',' | sed -e 's/,$/\n/')"
+sudo yum -q -y install \
+  python \
+  libselinux-python
 
-ANSIBLE_TARGET="${KUBE_MASTER},${KUBE_NODES}" \
+! pip --version && install_pip
+
+! ansible --version && install_ansible
+
+! jq --version && install_jq
+
+KUBE_NODES="$(jq -re '. | map(select(.type =="master" or .type == "worker")) | map(.ip) | join(",")' "${HOME}/nodes.json")"
+
+ANSIBLE_TARGET="${KUBE_NODES}" \
+ANSIBLE_EXTRAVARS="{'nodes_json':$(jq -rec . "${HOME}/nodes.json" | tr '"' "'")}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
+
+exit 1
 
 cmd="sudo kubeadm init --apiserver-advertise-address=${KUBE_MASTER} --pod-network-cidr=10.244.0.0/16"
 echo "running ${cmd}, please wait..."

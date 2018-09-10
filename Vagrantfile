@@ -76,14 +76,15 @@ Vagrant.configure(2) do |config|
     end
     node.vm.network "private_network", ip: origin[:ip]
     node.vm.provision "shell", path: "./extras/vagrant-ssh-key.sh", privileged: false
+    nodes_json = (kube_nodes<<origin).to_json.to_s
     node.vm.provision "shell" do |s|
-      s.path = "./extras/origin-bootstrap.sh"
+      s.path = "./extras/nodes-json.sh"
       s.privileged = false
       s.args = [
-        kube_nodes.to_json.to_s
+        nodes_json
       ]
     end
+    node.vm.provision "shell", path: "./extras/origin-bootstrap.sh", privileged: false
   end
-
 end
 
