@@ -37,7 +37,7 @@ mkdir -p "$HOME/.ssh/"
 echo "${VAGRANT_PEM}" > "$HOME/.ssh/id_rsa"
 chmod 600 "$HOME/.ssh/id_rsa"
 echo "$(ssh-keygen -y -f "$HOME/.ssh/id_rsa") vagrant-sandbox" > $HOME/.ssh/id_rsa.pub
-SANDBOX_PUBLIC_KEY="$(cat $HOME/.ssh/id_rsa.pub)"
-if ! grep "${SANDBOX_PUBLIC_KEY}" "$HOME/.ssh/authorized_keys" > /dev/null 2>&1; then
-  echo "${SANDBOX_PUBLIC_KEY}" >> "$HOME/.ssh/authorized_keys"
+VAGRANT_PUBLIC_KEY="$(cat $HOME/.ssh/id_rsa.pub)"
+if ! grep "${VAGRANT_PUBLIC_KEY}" "$HOME/.ssh/authorized_keys" > /dev/null 2>&1; then
+  echo "${VAGRANT_PUBLIC_KEY}" >> "$HOME/.ssh/authorized_keys"
 fi

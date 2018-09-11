@@ -4,7 +4,6 @@
 
   vars:
     - repos_enabled: true
-    - force_setup: true
 
   tasks:
     - include_role:

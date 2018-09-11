@@ -6,6 +6,12 @@
   with_items:
     - "{{base_packages}}"
 
+- name: "/etc/hosts updated"
+  template:
+    src: "hosts.j2"
+    dest: "/etc/hosts"
+  become: true
+
 - name: "pam limits set"
   pam_limits:
     domain: "{{item.domain}}"
@@ -25,32 +31,6 @@
   become: true
   with_items:
     - "{{sysctl_entries}}"
-
-- name: "/etc/hosts updated"
-  template:
-    src: "hosts.j2"
-    dest: "/etc/hosts"
-  become: true
-
-- name: "/etc/dhcp/dhclient.conf updated"
-  copy:
-    src: "{{role_path}}/files/dhclient.conf"
-    dest: "/etc/dhcp/dhclient.conf"
-  become: true
-  register: dhclientConf
-
-- name: "restart network"
-  systemd:
-    name: network
-    enabled: yes
-    state: restarted
-  become: true
-  when: dhclientConf is changed
-
-- name: "run dhclient"
-  shell: dhclient -r && dhclient
-  become: true
-  when: dhclientConf is changed
 
 - name: "unneeded services disabled and stopped"
   systemd:

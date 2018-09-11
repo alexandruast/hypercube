@@ -3,7 +3,6 @@
     url: https://download.docker.com/linux/centos/docker-ce.repo
     dest: /etc/yum.repos.d/docer-ce.repo
   become: true
-  when: ansible_distribution|lower == 'redhat' or ansible_distribution|lower == 'centos'
 
 - name: "docker packages installed"
   package:
