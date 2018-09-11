@@ -1,4 +1,4 @@
-# hypercube
+# kube-platform
 
 ## Microservices Platform Built on Kubernetes
 
