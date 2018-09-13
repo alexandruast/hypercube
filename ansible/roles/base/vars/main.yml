@@ -29,8 +29,6 @@ disabled_services:
   - ntpd
   - firewalld
 
-etc_profile_vars: []
-
 pam_limits:
   - domain: '*'
     type: '-'

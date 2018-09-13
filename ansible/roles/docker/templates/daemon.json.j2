@@ -1,0 +1,8 @@
+#jinja2: lstrip_blocks: "True"
+{
+  "dns": [
+  {% for server in dns_servers|default([]) %}
+  {{ server }},
+  {% endfor %}
+  ]
+}

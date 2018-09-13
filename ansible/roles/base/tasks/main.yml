@@ -1,3 +1,20 @@
+- name: "system dirs created"
+  file:
+    path: "{{item}}"
+    recurse: true
+    state: directory
+  become: true
+  with_items:
+    - "{{system_dirs}}"
+
+- name: "user dirs created"
+  file:
+    path: "{{item}}"
+    state: directory
+    mode: 0750
+  with_items:
+    - "{{user_dirs}}"
+
 - name: "base packages present"
   package:
     name: "{{item}}"

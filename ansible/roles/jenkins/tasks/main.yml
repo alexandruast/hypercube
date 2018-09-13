@@ -1,0 +1,136 @@
+- name: "service binaries downloaded and installed"
+  get_url:
+    url:  "http://mirrors.jenkins.io/war-stable/{{service_version}}/jenkins.war"
+    dest: "{{artifacts_dir}}/{{service_name}}-{{service_version}}.war"
+    force: no
+  register: service_archive
+  become: true
+
+- name: "service binary check"
+  stat:
+    path: "{{jenkins_war}}"
+  register: service_binary_check
+  changed_when: false
+
+- name: "service group present"
+  group:
+    name: "{{service_group}}"
+  become: true
+
+- name: "service user present"
+  user:
+    name: "{{service_user}}"
+    group: "{{service_group}}"
+  become: true
+
+- name: "service data directory created"
+  file:
+    path: "{{service_data_dir}}"
+    state: directory
+    mode: 0750
+    owner:  "{{service_user}}"
+    group:  "{{service_group}}"
+  become: true
+
+- name: "workspace directory created"
+  file:
+    path: "{{service_data_dir}}/workspace"
+    state: directory
+    mode: 0750
+    owner:  "{{service_user}}"
+    group:  "{{service_group}}"
+  become: true
+
+- name: "init.groovy.d directory created"
+  file:
+    path: "{{service_data_dir}}/init.groovy.d"
+    state: directory
+    mode: 0750
+    owner:  "{{service_user}}"
+    group:  "{{service_group}}"
+  become: true
+
+- name: "init.groovy.d scripts are in place"
+  copy:
+    src: "{{item}}"
+    dest: "{{service_data_dir}}/init.groovy.d/"
+    mode: 0640
+    owner:  "{{service_user}}"
+    group:  "{{service_group}}"
+  with_fileglob: "{{role_path}}/files/init.groovy.d/*"
+  become: true
+
+- name: "systemd service config updated"
+  template:
+    src: "{{service_init_conf}}"
+    dest: "/etc/systemd/system/{{service_name}}.service"
+    mode: 0644
+  become: true
+  register: systemd_config
+
+- name: "systemd daemon reload"
+  systemd: daemon_reload=yes
+  become: true
+  when: systemd_config is changed
+
+- name: "docker installed check"
+  shell: which docker
+  ignore_errors: true
+  register: docker_installed
+  changed_when: false
+
+- block:
+  - name: "user belongs to docker group"
+    user:
+      name: "{{service_user}}"
+      groups: docker
+      append: yes
+    become: true
+    register: docker_group
+
+  - name: "restart docker"
+    systemd:
+      name: docker
+      state: restarted
+    become: true
+    when: docker_group is changed
+  when: docker_installed.rc == 0
+
+- name: "service binaries installed"
+  copy:
+    src:  "{{artifacts_dir}}/{{service_name}}-{{service_version}}.war"
+    dest: "{{jenkins_war}}"
+    owner:  "{{service_user}}"
+    group:  "{{service_group}}"
+    remote_src: yes
+  register: service_binary
+  become: true
+  when: service_archive.changed
+    or not service_binary_check.stat.exists
+
+- name: "service enabled"
+  systemd:
+    name: "{{service_name}}"
+    enabled: yes
+  become: true
+
+- name: "service started"
+  systemd:
+    name: "{{service_name}}"
+    state: started
+  register: service_started
+  become: true
+
+- name: "restart service"
+  systemd:
+    name: "{{service_name}}"
+    state: restarted
+  become: true
+  when: (systemd_config is changed
+    or service_binary is changed
+    or service_config is changed
+    or docker_group is changed
+    or oracle_java_installed.changed|default(false)
+    or openjdk_java_installed.changed|default(false))
+    and not service_started is changed
+

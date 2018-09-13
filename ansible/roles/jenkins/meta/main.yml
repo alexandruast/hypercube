@@ -1,0 +1,5 @@
+dependencies:
+  - role: git
+  - role: ansible
+  - role: jq
+  - role: java8-jre

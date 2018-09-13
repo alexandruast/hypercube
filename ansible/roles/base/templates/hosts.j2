@@ -1,5 +1,5 @@
 127.0.0.1  localhost
 ::1        localhost
-{% for node in nodes_json|default([]) %}
-{{ node.ip }}  {{ node.hostname }}
+{% for host in etc_hosts|default([]) %}
+{{ host.ip }}  {{ host.hostname }}
 {% endfor %}

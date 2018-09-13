@@ -4,47 +4,37 @@ trap 'RC=$?; echo [error] exit code $RC running $BASH_COMMAND; exit $RC' ERR
 
 SSH_OPTS='-o LogLevel=error -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes'
 
-JQ_VERSION='1.5'
-JQ_CHECK_CMD='jq --version >/dev/null 2>&1'
+sudo yum localinstall -q -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-PIP_CHECK_CMD='pip --version >/dev/null 2>&1'
+sudo yum -q -y install \
+  jq  \
+  pip \
+  python \
+  libselinux-python \
+  ansible
 
-ANSIBLE_VERSION='2.6.4'
-ANSIBLE_CHECK_CMD='ansible --version >/dev/null 2>&1'
-
-install_jq() {
-  sudo curl -LSs https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 -o /usr/local/bin/jq \
-  && sudo chmod +x /usr/local/bin/jq \
-  && eval "${JQ_CHECK_CMD}"
-}
-
-install_pip() {
-  curl -LSs "https://bootstrap.pypa.io/get-pip.py" | sudo python \
-  && eval "${PIP_CHECK_CMD}"
-}
-
-install_ansible() {
-  sudo pip install ansible==${ANSIBLE_VERSION} \
-  && eval "${ANSIBLE_CHECK_CMD}"
-}
+ORIGIN="$(jq -re '.kube_tools | map(.ip) | join(",")' "environment.json")"
+KUBE_MASTERS="$(jq -re '.kube_masters | map(.ip) | join(",")' "environment.json")"
+KUBE_WORKERS="$(jq -re '.kube_workers | map(.ip) | join(",")' "environment.json")"
+ETC_HOSTS="$(jq -rec '[.kube_masters,.kube_workers,.kube_tools | .[] | {ip: .ip, hostname: .hostname} ]' "environment.json")"
 
 cd /vagrant/
 
-sudo yum -q -y install \
-  python \
-  libselinux-python
+# setting up origin
+ANSIBLE_TARGET="${ORIGIN}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
+  ./apl-wrapper.sh ansible/target-origin.yml
 
-! eval "${PIP_CHECK_CMD}" && install_pip
-
-! eval "${ANSIBLE_CHECK_CMD}" && install_ansible
-
-! eval "${JQ_CHECK_CMD}" && install_jq
-
-KUBE_NODES="$(jq -re '. | map(select(.type =="master" or .type == "worker")) | map(.ip) | join(",")' "${HOME}/nodes.json")"
-
-ANSIBLE_TARGET="${KUBE_NODES}" \
-ANSIBLE_EXTRAVARS="{'nodes_json':$(jq -rec . "${HOME}/nodes.json" | tr '"' "'")}" \
+# setting up kube-masters
+ANSIBLE_TARGET="${KUBE_MASTERS}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
+
+# setting up kube-workers
+ANSIBLE_TARGET="${KUBE_WORKERS}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
+  ./apl-wrapper.sh ansible/target-kubernetes.yml
+
 
 exit 0
 

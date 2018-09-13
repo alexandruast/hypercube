@@ -1,0 +1,5 @@
+- name: "required packages installed"
+  package:
+    name: pip
+    state: present
+  become: true
