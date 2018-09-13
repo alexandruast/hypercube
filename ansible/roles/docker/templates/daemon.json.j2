@@ -2,7 +2,7 @@
 {
   "dns": [
   {% for server in dns_servers|default([]) %}
-  {{ server }},
+  "{{ server }}"{% if not loop.last %},{% endif %}
   {% endfor %}
   ]
 }
