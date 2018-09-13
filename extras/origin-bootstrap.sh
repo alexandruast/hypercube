@@ -16,25 +16,25 @@ sudo yum -q -y install \
 ORIGIN="$(jq -re '.kube_tools | map(.ip) | join(",")' "environment.json")"
 KUBE_MASTERS="$(jq -re '.kube_masters | map(.ip) | join(",")' "environment.json")"
 KUBE_WORKERS="$(jq -re '.kube_workers | map(.ip) | join(",")' "environment.json")"
-ETC_HOSTS="$(jq -rec '[.kube_masters,.kube_workers,.kube_tools | .[] | {ip: .ip, hostname: .hostname} ]' "environment.json")"
+ALL_NODES="$(jq -rec '[.kube_masters,.kube_workers,.kube_tools | .[] | {ip: .ip, hostname: .hostname} ]' "environment.json")"
+EXTRAVARS_HOSTS="$(echo ${ALL_NODES} | tr '"' "'")"
 
 cd /vagrant/
 
 # setting up origin
 ANSIBLE_TARGET="${ORIGIN}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-origin.yml
 
 # setting up kube-masters
 ANSIBLE_TARGET="${KUBE_MASTERS}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
 
 # setting up kube-workers
 ANSIBLE_TARGET="${KUBE_WORKERS}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':$(echo "${ETC_HOSTS}" | tr '"' "'")}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
-
 
 exit 0
 
