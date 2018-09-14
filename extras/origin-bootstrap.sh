@@ -4,6 +4,8 @@ trap 'RC=$?; echo [error] exit code $RC running $BASH_COMMAND; exit $RC' ERR
 
 SSH_OPTS='-o LogLevel=error -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes'
 
+
+
 sudo yum localinstall -q -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 sudo yum -q -y install \
@@ -16,29 +18,37 @@ sudo yum -q -y install \
 ORIGIN="$(jq -re '.kube_tools | map(.ip) | join(",")' "environment.json")"
 KUBE_MASTERS="$(jq -re '.kube_masters | map(.ip) | join(",")' "environment.json")"
 KUBE_WORKERS="$(jq -re '.kube_workers | map(.ip) | join(",")' "environment.json")"
-ALL_NODES="$(jq -rec '[.kube_masters,.kube_workers,.kube_tools | .[] | {ip: .ip, hostname: .hostname} ]' "environment.json")"
-EXTRAVARS_HOSTS="$(echo ${ALL_NODES} | tr '"' "'")"
+VAGRANT_HOSTS="$(jq -rec '[.kube_masters,.kube_workers,.kube_tools | .[] | {ip: .ip, hostname: .hostname} ]' "environment.json" | tr '"' "'")"
 
 cd /vagrant/
 
 # setting up origin
 ANSIBLE_TARGET="${ORIGIN}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${VAGRANT_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-origin.yml
+
+# installing kubernetes single node on origin for external services, like dns and etcd
+if ! [[ -f "${HOME}/.kube/config" ]]; then
+  sudo kubeadm init --apiserver-advertise-address=${ORIGIN} --pod-network-cidr=10.240.0.0/24
+fi
+
+kubectl get nodes
+
+exit 0
 
 # setting up kube-masters
 ANSIBLE_TARGET="${KUBE_MASTERS}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${VAGRANT_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
 
 # setting up kube-workers
 ANSIBLE_TARGET="${KUBE_WORKERS}" \
-ANSIBLE_EXTRAVARS="{'etc_hosts':${EXTRAVARS_HOSTS}}" \
+ANSIBLE_EXTRAVARS="{'etc_hosts':${VAGRANT_HOSTS}}" \
   ./apl-wrapper.sh ansible/target-kubernetes.yml
 
-exit 0
 
-cmd="sudo kubeadm init --apiserver-advertise-address=${KUBE_MASTER} --pod-network-cidr=10.244.0.0/16"
+
+cmd="sudo kubeadm init --apiserver-advertise-address=${ORIGIN} --pod-network-cidr=10.240.0.0/24"
 echo "running ${cmd}, please wait..."
 result=$(${cmd})
 

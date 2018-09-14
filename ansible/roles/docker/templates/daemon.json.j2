@@ -1,5 +1,7 @@
 #jinja2: lstrip_blocks: "True"
 {
+  "live-restore": true,
+  "group": "dockerroot",
   "dns": [
   {% for server in dns_servers|default([]) %}
   "{{ server }}"{% if not loop.last %},{% endif %}
